@@ -132,6 +132,27 @@ func parseMaxLength(dataType string) *int {
 }
 
 func (c *SQLiteConnector) extractIndexes(ctx context.Context, tableName string) ([]Index, error) {
+	// Collect index metadata first, then query columns in a second pass.
+	// SQLite in-memory databases share a single connection, so nested queries
+	// while a result set is open can silently return empty results.
+	indexes, err := c.listIndexMeta(ctx, tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Now query column details for each index with no open result set.
+	for i := range indexes {
+		cols, err := c.extractIndexColumns(ctx, indexes[i].Name)
+		if err != nil {
+			return nil, err
+		}
+		indexes[i].Columns = cols
+	}
+
+	return indexes, nil
+}
+
+func (c *SQLiteConnector) listIndexMeta(ctx context.Context, tableName string) ([]Index, error) {
 	rows, err := c.db.QueryContext(ctx, fmt.Sprintf("PRAGMA index_list('%s')", tableName))
 	if err != nil {
 		return nil, fmt.Errorf("getting indexes for %s: %w", tableName, err)
@@ -146,14 +167,8 @@ func (c *SQLiteConnector) extractIndexes(ctx context.Context, tableName string) 
 		if err := rows.Scan(&seq, &name, &unique, &origin, &partial); err != nil {
 			return nil, fmt.Errorf("scanning index: %w", err)
 		}
-
-		cols, err := c.extractIndexColumns(ctx, name)
-		if err != nil {
-			return nil, err
-		}
 		indexes = append(indexes, Index{
 			Name:     name,
-			Columns:  cols,
 			IsUnique: unique == 1,
 			Type:     origin,
 		})

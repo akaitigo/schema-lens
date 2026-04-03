@@ -32,10 +32,10 @@ type Column struct {
 
 // Index represents an index on a table.
 type Index struct {
-	Name    string
-	Columns []string
+	Name     string
+	Columns  []string
 	IsUnique bool
-	Type    string
+	Type     string
 }
 
 // ForeignKey represents a foreign key constraint.

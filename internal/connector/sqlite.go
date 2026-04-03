@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite" // SQLite driver
 )
 
 // SQLiteConnector implements the Connector interface for SQLite databases.
@@ -220,7 +220,7 @@ func (c *SQLiteConnector) extractForeignKeys(ctx context.Context, tableName stri
 }
 
 func (c *SQLiteConnector) SampleData(ctx context.Context, table string, limit int) ([]map[string]any, error) {
-	query := fmt.Sprintf("SELECT * FROM \"%s\" ORDER BY RANDOM() LIMIT %d", table, limit)
+	query := `SELECT * FROM "` + table + `" ORDER BY RANDOM() LIMIT ` + fmt.Sprint(limit)
 	rows, err := c.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("sampling data from %s: %w", table, err)

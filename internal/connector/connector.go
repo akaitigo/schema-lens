@@ -1,3 +1,4 @@
+// Package connector provides database connection and schema extraction for multiple DB engines.
 package connector
 
 import (
@@ -22,20 +23,20 @@ type Table struct {
 
 // Column represents a column in a table.
 type Column struct {
+	DefaultValue *string
+	MaxLength    *int
 	Name         string
 	DataType     string
-	MaxLength    *int
 	IsNullable   bool
-	DefaultValue *string
 	IsPrimaryKey bool
 }
 
 // Index represents an index on a table.
 type Index struct {
 	Name     string
+	Type     string
 	Columns  []string
 	IsUnique bool
-	Type     string
 }
 
 // ForeignKey represents a foreign key constraint.

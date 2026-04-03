@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql" // MySQL driver
 )
 
 // MySQLConnector implements the Connector interface for MySQL databases.
@@ -208,7 +208,7 @@ func (c *MySQLConnector) extractForeignKeys(ctx context.Context, tableName strin
 		return nil, err
 	}
 
-	var fks []ForeignKey
+	fks := make([]ForeignKey, 0, len(fkMap))
 	for _, fk := range fkMap {
 		fks = append(fks, *fk)
 	}
@@ -216,7 +216,7 @@ func (c *MySQLConnector) extractForeignKeys(ctx context.Context, tableName strin
 }
 
 func (c *MySQLConnector) SampleData(ctx context.Context, table string, limit int) ([]map[string]any, error) {
-	query := fmt.Sprintf("SELECT * FROM `%s` ORDER BY RAND() LIMIT %d", table, limit)
+	query := "SELECT * FROM `" + table + "` ORDER BY RAND() LIMIT " + fmt.Sprint(limit) //nolint:gosec // table name is from schema metadata, not user input
 	rows, err := c.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("sampling data from %s: %w", table, err)

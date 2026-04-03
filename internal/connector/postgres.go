@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	_ "github.com/lib/pq"
+	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
 // PostgresConnector implements the Connector interface for PostgreSQL databases.
@@ -217,7 +217,7 @@ func (c *PostgresConnector) extractForeignKeys(ctx context.Context, tableName st
 }
 
 func (c *PostgresConnector) SampleData(ctx context.Context, table string, limit int) ([]map[string]any, error) {
-	query := fmt.Sprintf(`SELECT * FROM "%s" ORDER BY RANDOM() LIMIT %d`, table, limit)
+	query := `SELECT * FROM "` + table + `" ORDER BY RANDOM() LIMIT ` + fmt.Sprint(limit)
 	rows, err := c.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("sampling data from %s: %w", table, err)

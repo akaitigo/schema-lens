@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Install tools
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          go install mvdan.cc/gofumpt@latest
+          go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Format check
+        run: |
+          gofumpt -l . | tee /tmp/fmt.out
+          test ! -s /tmp/fmt.out || { echo "gofumpt: unformatted files found"; exit 1; }
+
+      - name: Tidy check
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Lint
+        run: golangci-lint run ./...
+
+      - name: Test
+        run: go test -v -race -count=1 -coverprofile=coverage.out ./...
+
+      - name: Build
+        run: go build -trimpath -ldflags "-s -w" ./...

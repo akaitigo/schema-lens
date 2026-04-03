@@ -1,0 +1,55 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'INPUT=$(cat); FILE=$(echo \"$INPUT\" | jq -r \".file_path // empty\"); if [ -z \"$FILE\" ]; then exit 0; fi; BASENAME=$(basename \"$FILE\"); case \"$BASENAME\" in .golangci.yml|.golangci.yaml|Makefile) echo \"BLOCK: lint設定・ビルド設定の変更はADR承認が必須です\" >&2; exit 1;; .env|.env.local|.env.production|.env.staging|.env.development|credentials.json|secrets.yml|secrets.yaml|*.pem|*.key|*.p12|*.pfx) echo \"BLOCK: 機密ファイルの編集はブロックされました。.env.exampleを更新してください\" >&2; exit 1;; esac'"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r \".command // empty\"); if echo \"$CMD\" | grep -qE \"(rm -rf|DROP TABLE|DELETE FROM|git push --force|git reset --hard)\"; then echo \"BLOCK: 破壊的コマンドはブロックされました\" >&2; exit 2; fi; if echo \"$CMD\" | grep -qE \"--no-verify\"; then echo \"BLOCK: --no-verify はブロックされました。フックをスキップしないでください\" >&2; exit 2; fi'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/post-lint.sh"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cp CLAUDE.md CLAUDE.backup.md 2>/dev/null || true'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "make check && make quality"
+          }
+        ]
+      }
+    ]
+  }
+}

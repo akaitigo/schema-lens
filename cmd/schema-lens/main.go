@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/akaitigo/schema-lens/internal/analyzer"
 	"github.com/akaitigo/schema-lens/internal/connector"
+	"github.com/akaitigo/schema-lens/internal/profiler"
+	"github.com/akaitigo/schema-lens/internal/reporter"
 	"github.com/spf13/cobra"
 )
 
@@ -28,6 +30,7 @@ func newRootCmd() *cobra.Command {
 		Version: version,
 	}
 	root.AddCommand(newAnalyzeCmd())
+	root.AddCommand(newMigrateCmd())
 	return root
 }
 
@@ -79,17 +82,148 @@ func runAnalyze(ctx context.Context, opts *analyzeOpts) error {
 		return fmt.Errorf("schema extraction failed: %w", err)
 	}
 
-	switch opts.format {
+	// When --suggest is not set and no profiling, use simple schema output
+	if !opts.suggest && !opts.profile {
+		return renderSchemaOnly(schema, opts.format)
+	}
+
+	// Run analysis
+	analysis := analyzer.Analyze(schema)
+
+	// Run profiling if requested
+	var profileResult *profiler.ProfileResult
+	if opts.profile {
+		profileResult, err = profiler.Profile(ctx, conn, schema, opts.sampleSize)
+		if err != nil {
+			return fmt.Errorf("profiling failed: %w", err)
+		}
+	}
+
+	// Generate report
+	report := reporter.GenerateReport(opts.dsn, analysis, profileResult)
+
+	// Format and output
+	return formatReport(report, opts.format)
+}
+
+// renderSchemaOnly outputs the raw schema information without analysis.
+func renderSchemaOnly(schema *connector.SchemaInfo, format string) error {
+	switch format {
 	case "json":
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		return enc.Encode(schema)
+		return reporter.FormatJSON(os.Stdout, schemaToReport(schema))
 	case "table", formatMarkdown:
-		printSchemaTable(schema, opts.format)
+		printSchemaTable(schema, format)
 		return nil
 	default:
-		return fmt.Errorf("unsupported format: %s (use table, json, or markdown)", opts.format)
+		return fmt.Errorf("unsupported format: %s (use table, json, or markdown)", format)
 	}
+}
+
+// schemaToReport creates a minimal Report from a SchemaInfo for JSON output.
+func schemaToReport(schema *connector.SchemaInfo) *reporter.Report {
+	columnCount := 0
+	for _, t := range schema.Tables {
+		columnCount += len(t.Columns)
+	}
+	return &reporter.Report{
+		Summary: reporter.Summary{
+			TableCount:   len(schema.Tables),
+			ColumnCount:  columnCount,
+			OverallScore: 100.0,
+		},
+	}
+}
+
+// formatReport writes the report in the specified format to stdout.
+func formatReport(report *reporter.Report, format string) error {
+	switch format {
+	case "table":
+		return reporter.FormatTable(os.Stdout, report)
+	case "json":
+		return reporter.FormatJSON(os.Stdout, report)
+	case formatMarkdown:
+		return reporter.FormatMarkdown(os.Stdout, report)
+	default:
+		return fmt.Errorf("unsupported format: %s (use table, json, or markdown)", format)
+	}
+}
+
+type migrateOpts struct {
+	dsn        string
+	dryRun     bool
+	sampleSize int
+}
+
+func newMigrateCmd() *cobra.Command {
+	opts := &migrateOpts{}
+
+	cmd := &cobra.Command{
+		Use:   "migrate",
+		Short: "Generate migration SQL from schema analysis",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if opts.dsn == "" {
+				return fmt.Errorf("--dsn is required")
+			}
+			return runMigrate(cmd.Context(), opts)
+		},
+	}
+
+	cmd.Flags().StringVar(&opts.dsn, "dsn", "", "database connection string")
+	cmd.Flags().BoolVar(&opts.dryRun, "dry-run", true, "only output SQL, do not execute (default: true)")
+	cmd.Flags().IntVar(&opts.sampleSize, "sample-size", 1000, "sample size for data profiling")
+
+	return cmd
+}
+
+func runMigrate(ctx context.Context, opts *migrateOpts) error {
+	conn, err := connector.NewFromDSN(opts.dsn)
+	if err != nil {
+		return fmt.Errorf("unsupported database: %w", err)
+	}
+
+	connErr := conn.Connect(ctx, opts.dsn)
+	if connErr != nil {
+		return fmt.Errorf("connection failed: %w", connErr)
+	}
+	defer conn.Close()
+
+	schema, err := conn.ExtractSchema(ctx)
+	if err != nil {
+		return fmt.Errorf("schema extraction failed: %w", err)
+	}
+
+	analysis := analyzer.Analyze(schema)
+
+	profileResult, err := profiler.Profile(ctx, conn, schema, opts.sampleSize)
+	if err != nil {
+		return fmt.Errorf("profiling failed: %w", err)
+	}
+
+	report := reporter.GenerateReport(opts.dsn, analysis, profileResult)
+
+	if len(report.MigrationSQL) == 0 {
+		fmt.Println("-- No migration SQL generated. Schema looks good!")
+		return nil
+	}
+
+	fmt.Println("-- Schema-Lens Migration SQL")
+	fmt.Println("-- Generated from schema analysis and data profiling")
+	fmt.Printf("-- Database: %s\n", opts.dsn)
+	fmt.Printf("-- Mode: %s\n", migrationMode(opts.dryRun))
+	fmt.Println()
+
+	for _, sql := range report.MigrationSQL {
+		fmt.Println(sql)
+	}
+
+	return nil
+}
+
+func migrationMode(dryRun bool) string {
+	if dryRun {
+		return "dry-run (no changes applied)"
+	}
+	return "execute"
 }
 
 func printSchemaTable(schema *connector.SchemaInfo, format string) {

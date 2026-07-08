@@ -71,7 +71,8 @@ func insertBadSchemaData(t *testing.T, conn *connector.SQLiteConnector) {
 	}
 
 	for i := 1; i <= 5; i++ {
-		if _, err := db.ExecContext(ctx,
+		if _, err := db.ExecContext(
+			ctx,
 			`INSERT INTO "order" (id, customer_id, total, region_id) VALUES (?, ?, ?, ?)`,
 			i, (i%5)+1, fmt.Sprintf("$%d.00", i*10), (i%3)+1,
 		); err != nil {
@@ -92,7 +93,8 @@ func insertProductRow(t *testing.T, db *sql.DB, ctx context.Context, i int) {
 	verified := (i + 1) % 2
 	confirmed := i % 2
 
-	if _, err := db.ExecContext(ctx,
+	if _, err := db.ExecContext(
+		ctx,
 		`INSERT INTO products
 			(id, sku, title, description, addr1, addr2, addr3,
 			 phone1, phone2, phone3,
@@ -285,7 +287,8 @@ func TestIntegration_GoodSchema(t *testing.T) {
 
 	db := conn.DB()
 	for i := 1; i <= 10; i++ {
-		if _, err := db.ExecContext(ctx,
+		if _, err := db.ExecContext(
+			ctx,
 			"INSERT INTO users (id, first_name, last_name, email) VALUES (?, ?, ?, ?)",
 			i, fmt.Sprintf("User%d", i), fmt.Sprintf("Last%d", i), fmt.Sprintf("user%d@example.com", i),
 		); err != nil {
@@ -293,7 +296,8 @@ func TestIntegration_GoodSchema(t *testing.T) {
 		}
 	}
 	for i := 1; i <= 20; i++ {
-		if _, err := db.ExecContext(ctx,
+		if _, err := db.ExecContext(
+			ctx,
 			"INSERT INTO orders (id, user_id, total_amount, order_date) VALUES (?, ?, ?, ?)",
 			i, (i%10)+1, float64(i)*10.5, "2026-01-15",
 		); err != nil {

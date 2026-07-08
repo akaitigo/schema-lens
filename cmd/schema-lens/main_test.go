@@ -36,7 +36,7 @@ func TestAnalyzeCmd_MissingDSN(t *testing.T) {
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)
-	cmd.SetArgs([]string{"analyze"})
+	cmd.SetArgs([]string{cmdAnalyze})
 
 	err := cmd.Execute()
 	if err == nil {
@@ -54,7 +54,7 @@ func TestAnalyzeCmd_InvalidDSN(t *testing.T) {
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)
-	cmd.SetArgs([]string{"analyze", "--dsn", "invalid://not-a-real-database"})
+	cmd.SetArgs([]string{cmdAnalyze, "--dsn", "invalid://not-a-real-database"})
 
 	err := cmd.Execute()
 	if err == nil {
@@ -104,7 +104,7 @@ func TestAnalyzeCmd_SQLiteInMemory_SuggestMode(t *testing.T) {
 	})
 
 	cmd := newRootCmd()
-	cmd.SetArgs([]string{"analyze", "--dsn", dsn, "--suggest"})
+	cmd.SetArgs([]string{cmdAnalyze, "--dsn", dsn, "--suggest"})
 
 	// The output goes to os.Stdout, so we verify that execution succeeds
 	// without error. The formatReport function writes to os.Stdout directly.
@@ -128,7 +128,7 @@ func TestAnalyzeCmd_SQLiteInMemory_WithProfile(t *testing.T) {
 	})
 
 	cmd := newRootCmd()
-	cmd.SetArgs([]string{"analyze", "--dsn", dsn, "--suggest", "--profile"})
+	cmd.SetArgs([]string{cmdAnalyze, "--dsn", dsn, "--suggest", "--profile"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("analyze --suggest --profile command failed: %v", err)
@@ -142,7 +142,7 @@ func TestMigrateCmd_MissingDSN(t *testing.T) {
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)
-	cmd.SetArgs([]string{"migrate"})
+	cmd.SetArgs([]string{cmdMigrate})
 
 	err := cmd.Execute()
 	if err == nil {
@@ -165,7 +165,7 @@ func TestAnalyzeCmd_SchemaOnlyMode(t *testing.T) {
 
 	// Without --suggest or --profile, the command renders schema-only output.
 	cmd := newRootCmd()
-	cmd.SetArgs([]string{"analyze", "--dsn", dsn})
+	cmd.SetArgs([]string{cmdAnalyze, "--dsn", dsn})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("analyze (schema-only) failed: %v", err)
@@ -183,7 +183,7 @@ func TestAnalyzeCmd_JSONFormat(t *testing.T) {
 	})
 
 	cmd := newRootCmd()
-	cmd.SetArgs([]string{"analyze", "--dsn", dsn, "--suggest", "--format", "json"})
+	cmd.SetArgs([]string{cmdAnalyze, "--dsn", dsn, "--suggest", "--format", formatJSON})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("analyze --format json failed: %v", err)
@@ -201,7 +201,7 @@ func TestAnalyzeCmd_MarkdownFormat(t *testing.T) {
 	})
 
 	cmd := newRootCmd()
-	cmd.SetArgs([]string{"analyze", "--dsn", dsn, "--suggest", "--format", "markdown"})
+	cmd.SetArgs([]string{cmdAnalyze, "--dsn", dsn, "--suggest", "--format", "markdown"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("analyze --format markdown failed: %v", err)
@@ -222,7 +222,7 @@ func TestMigrateCmd_SQLiteInMemory(t *testing.T) {
 	})
 
 	cmd := newRootCmd()
-	cmd.SetArgs([]string{"migrate", "--dsn", dsn})
+	cmd.SetArgs([]string{cmdMigrate, "--dsn", dsn})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("migrate command failed: %v", err)
@@ -243,7 +243,7 @@ func TestAnalyzeCmd_InvalidFormat(t *testing.T) {
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)
-	cmd.SetArgs([]string{"analyze", "--dsn", dsn, "--suggest", "--format", "xml"})
+	cmd.SetArgs([]string{cmdAnalyze, "--dsn", dsn, "--suggest", "--format", "xml"})
 
 	err := cmd.Execute()
 	if err == nil {

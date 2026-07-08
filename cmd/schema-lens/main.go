@@ -15,7 +15,13 @@ import (
 
 var version = "dev"
 
-const formatMarkdown = "markdown"
+const (
+	cmdAnalyze = "analyze"
+	cmdMigrate = "migrate"
+
+	formatJSON     = "json"
+	formatMarkdown = "markdown"
+)
 
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
@@ -46,7 +52,7 @@ func newAnalyzeCmd() *cobra.Command {
 	opts := &analyzeOpts{}
 
 	cmd := &cobra.Command{
-		Use:   "analyze",
+		Use:   cmdAnalyze,
 		Short: "Analyze database schema quality",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if opts.dsn == "" {
@@ -109,7 +115,7 @@ func runAnalyze(ctx context.Context, opts *analyzeOpts) error {
 // renderSchemaOnly outputs the raw schema information without analysis.
 func renderSchemaOnly(schema *connector.SchemaInfo, format string) error {
 	switch format {
-	case "json":
+	case formatJSON:
 		return reporter.FormatJSON(os.Stdout, schemaToReport(schema))
 	case "table", formatMarkdown:
 		printSchemaTable(schema, format)
@@ -139,7 +145,7 @@ func formatReport(report *reporter.Report, format string) error {
 	switch format {
 	case "table":
 		return reporter.FormatTable(os.Stdout, report)
-	case "json":
+	case formatJSON:
 		return reporter.FormatJSON(os.Stdout, report)
 	case formatMarkdown:
 		return reporter.FormatMarkdown(os.Stdout, report)
@@ -158,7 +164,7 @@ func newMigrateCmd() *cobra.Command {
 	opts := &migrateOpts{}
 
 	cmd := &cobra.Command{
-		Use:   "migrate",
+		Use:   cmdMigrate,
 		Short: "Generate migration SQL from schema analysis",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if opts.dsn == "" {

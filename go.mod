@@ -3,7 +3,7 @@ module github.com/akaitigo/schema-lens
 go 1.26.0
 
 require (
-	github.com/go-sql-driver/mysql v1.10.0
+	github.com/go-sql-driver/mysql v1.10.1
 	github.com/lib/pq v1.12.3
 	github.com/spf13/cobra v1.10.2
 	modernc.org/sqlite v1.60.1
